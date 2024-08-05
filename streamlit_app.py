@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
+import pandas as pd
 from requests.auth import HTTPBasicAuth
+from io import BytesIO
 
 # Fonction pour récupérer les URLs des articles en brouillon
 def get_draft_urls(username, password, base_url):
@@ -9,7 +11,7 @@ def get_draft_urls(username, password, base_url):
 
     if response.status_code == 200:
         posts = response.json()
-        urls = [post['link'] for post in posts]
+        urls = [(base_url, post['link'], post.get('categories', [])) for post in posts]
         return urls
     else:
         st.error(f"Erreur lors de la récupération des articles en brouillon pour {base_url}.")
@@ -38,17 +40,22 @@ if st.button("Récupérer les URLs"):
         if all_urls:
             st.success("URLs des brouillons récupérés avec succès.")
             st.write("URLs des brouillons :")
-            for url in all_urls:
-                st.write(url)
+            for site_url, draft_url, categories in all_urls:
+                st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {', '.join(categories)}")
 
             # Option de téléchargement
             if st.button("Télécharger les URLs"):
-                urls_text = "\n".join(all_urls)
+                df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    df.to_excel(writer, index=False)
+                output.seek(0)
+
                 st.download_button(
-                    label="Télécharger le fichier texte",
-                    data=urls_text,
-                    file_name="urls_brouillons.txt",
-                    mime="text/plain"
+                    label="Télécharger le fichier Excel",
+                    data=output,
+                    file_name="urls_brouillons.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
         else:
             st.info("Aucune URL de brouillon trouvée.")
