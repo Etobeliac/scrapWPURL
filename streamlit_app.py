@@ -13,7 +13,14 @@ def get_draft_urls(username, password, base_url):
         posts = response.json()
         urls = []
         for post in posts:
-            categories = [category['name'] for category in post.get('categories', [])]
+            categories = []
+            if 'categories' in post:
+                categories_ids = post['categories']
+                for category_id in categories_ids:
+                    category_response = requests.get(f"{base_url}/wp-json/wp/v2/categories/{category_id}", auth=HTTPBasicAuth(username, password))
+                    if category_response.status_code == 200:
+                        category_name = category_response.json().get('name', '')
+                        categories.append(category_name)
             urls.append((base_url, post['link'], ', '.join(categories)))
         return urls
     else:
