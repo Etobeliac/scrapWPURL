@@ -11,7 +11,10 @@ def get_draft_urls(username, password, base_url):
 
     if response.status_code == 200:
         posts = response.json()
-        urls = [(base_url, post['link'], post.get('categories', [])) for post in posts]
+        urls = []
+        for post in posts:
+            categories = [category['name'] for category in post.get('categories', [])]
+            urls.append((base_url, post['link'], ', '.join(categories)))
         return urls
     else:
         st.error(f"Erreur lors de la récupération des articles en brouillon pour {base_url}.")
@@ -41,7 +44,7 @@ if st.button("Récupérer les URLs"):
             st.success("URLs des brouillons récupérés avec succès.")
             st.write("URLs des brouillons :")
             for site_url, draft_url, categories in all_urls:
-                st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {', '.join(categories)}")
+                st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
 
             # Option de téléchargement
             if st.button("Télécharger les URLs"):
