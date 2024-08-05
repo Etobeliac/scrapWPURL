@@ -33,14 +33,14 @@ st.title("Récupérateur d'URLs des Articles en Brouillon WordPress")
 # Entrée des informations
 username = st.text_input("Nom d'utilisateur WordPress")
 password = st.text_input("Mot de passe WordPress", type="password")
-base_urls = st.text_area("URLs de base de vos sites WordPress (séparées par des virgules)")
+base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)")
 
 # Bouton de récupération
 if st.button("Récupérer les URLs"):
     if not username or not password or not base_urls:
         st.error("Veuillez remplir tous les champs.")
     else:
-        base_urls_list = [url.strip() for url in base_urls.split(",")]
+        base_urls_list = [url.strip() for url in base_urls.split("\n") if url.strip()]
         all_urls = []
         for base_url in base_urls_list:
             urls = get_draft_urls(username, password, base_url)
