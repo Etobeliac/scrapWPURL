@@ -4,7 +4,6 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 import time
 
-# Fonction pour récupérer les URLs des articles en brouillon avec pagination
 def get_draft_urls(username, password, base_url):
     url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
     response = requests.get(url, auth=HTTPBasicAuth(username, password))
@@ -38,15 +37,12 @@ def get_draft_urls(username, password, base_url):
         st.error(f"Erreur lors de la récupération des articles en brouillon pour {base_url}.")
         return []
 
-# Interface utilisateur
 st.title("Récupérateur d'URLs des Articles en Brouillon WordPress")
 
-# Entrée des informations
 username = st.text_input("Nom d'utilisateur WordPress")
 password = st.text_input("Mot de passe WordPress", type="password")
 base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)")
 
-# Bouton de récupération
 if st.button("Récupérer les URLs"):
     if not username or not password or not base_urls:
         st.error("Veuillez remplir tous les champs.")
@@ -59,15 +55,14 @@ if st.button("Récupérer les URLs"):
         start_time = time.time()
 
         for i, base_url in enumerate(base_urls_list):
-            site_progress = st.empty()
-            site_progress.text(f"Traitement du site : {base_url}")
+            st.write(f"Traitement du site : {base_url}")
             
             urls = get_draft_urls(username, password, base_url)
             if urls:
                 all_urls.extend(urls)
-                site_progress.text(f"Nombre d'URLs trouvées pour {base_url}: {len(urls)}")
+                st.write(f"Nombre d'URLs trouvées pour {base_url}: {len(urls)}")
             else:
-                site_progress.text(f"Aucune URL trouvée pour {base_url}")
+                st.write(f"Aucune URL trouvée pour {base_url}")
             
             progress = (i + 1) / total_sites
             elapsed_time = time.time() - start_time
@@ -75,8 +70,8 @@ if st.button("Récupérer les URLs"):
             estimated_remaining_time = max(estimated_total_time - elapsed_time, 0)
             
             progress_bar.progress(progress)
-            progress_text.text(f"Progression: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
-            time.sleep(0.1)  # Petit délai pour permettre à l'interface de se mettre à jour
+            progress_text.text(f"Progression globale: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
+            time.sleep(0.1)
 
         progress_text.text("Récupération terminée.")
 
@@ -84,11 +79,9 @@ if st.button("Récupérer les URLs"):
             st.success(f"URLs des brouillons récupérés avec succès. Total: {len(all_urls)} URLs.")
             st.write("Aperçu des URLs des brouillons :")
 
-            # Afficher les premiers résultats
             df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
-            st.write(df.head(10))  # Afficher les 10 premiers résultats
+            st.write(df.head(10))
 
-            # Option pour télécharger tous les résultats
             csv = df.to_csv(index=False)
             st.download_button(
                 label="Télécharger tous les résultats (CSV)",
@@ -99,6 +92,5 @@ if st.button("Récupérer les URLs"):
         else:
             st.info("Aucune URL de brouillon trouvée.")
 
-# Bouton de réinitialisation
 if st.button("Réinitialiser"):
     st.experimental_rerun()
