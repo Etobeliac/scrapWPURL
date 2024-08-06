@@ -53,9 +53,9 @@ if st.button("Récupérer les URLs"):
             for site_url, draft_url, categories in all_urls:
                 st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
 
-            # Option de téléchargement
+            # Prévisualisation sous forme de tableau
             df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
-            st.write(df)  # Afficher le DataFrame comme prévisualisation
+            st.write(df)
 
             # Option de téléchargement
             output = BytesIO()
