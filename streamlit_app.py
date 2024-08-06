@@ -41,16 +41,14 @@ if st.button("Récupérer les URLs"):
     else:
         base_urls_list = [url.strip() for url in base_urls.split("\n") if url.strip()]
         all_urls = []
-
-        # Barre de progression
         progress_bar = st.progress(0)
-        total_urls = len(base_urls_list)
+        total_sites = len(base_urls_list)
 
         for i, base_url in enumerate(base_urls_list):
             urls = get_draft_urls(username, password, base_url)
             if urls:
                 all_urls.extend(urls)
-            progress_bar.progress((i + 1) / total_urls)
+            progress_bar.progress((i + 1) / total_sites)
 
         if all_urls:
             st.success("URLs des brouillons récupérés avec succès.")
