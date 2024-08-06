@@ -50,12 +50,14 @@ if st.button("Récupérer les URLs"):
         base_urls_list = [url.strip() for url in base_urls.split("\n") if url.strip()]
         all_urls = []
         total_sites = len(base_urls_list)
-        progress_bar = st.progress(0)
+        progress_container = st.empty()
+        progress_bar = progress_container.progress(0)
         progress_text = st.empty()
+        site_progress = st.empty()
         start_time = time.time()
 
         for i, base_url in enumerate(base_urls_list):
-            st.write(f"Traitement du site : {base_url}")
+            site_progress.text(f"Traitement du site : {base_url}")
             
             urls = get_draft_urls(username, password, base_url)
             if urls:
@@ -69,11 +71,13 @@ if st.button("Récupérer les URLs"):
             estimated_total_time = elapsed_time / progress if progress > 0 else 0
             estimated_remaining_time = max(estimated_total_time - elapsed_time, 0)
             
-            progress_bar.progress(progress)
-            progress_text.text(f"Progression globale: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
-            time.sleep(0.1)
+            progress_bar = progress_container.progress(progress)
+            progress_text.text(f"Progression globale: {progress:.1%} - Temps restant estimé: {int(estimated_remaining_time)} secondes")
+            
+            time.sleep(0.1)  # Petit délai pour permettre à l'interface de se mettre à jour
 
         progress_text.text("Récupération terminée.")
+        site_progress.empty()
 
         if all_urls:
             st.success(f"URLs des brouillons récupérés avec succès. Total: {len(all_urls)} URLs.")
