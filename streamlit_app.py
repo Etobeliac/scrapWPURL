@@ -55,8 +55,11 @@ if st.button("Récupérer les URLs"):
 
             # Option de téléchargement
             df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+            st.write(df)  # Afficher le DataFrame comme prévisualisation
+
+            # Option de téléchargement
             output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False)
             output.seek(0)
 
