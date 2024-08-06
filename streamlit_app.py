@@ -54,19 +54,18 @@ if st.button("Récupérer les URLs"):
                 st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
 
             # Option de téléchargement
-            if st.button("Télécharger les URLs"):
-                df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False)
-                output.seek(0)
+            df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False)
+            output.seek(0)
 
-                st.download_button(
-                    label="Télécharger le fichier Excel",
-                    data=output,
-                    file_name="urls_brouillons.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+            st.download_button(
+                label="Télécharger le fichier Excel",
+                data=output,
+                file_name="urls_brouillons.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         else:
             st.info("Aucune URL de brouillon trouvée.")
 
