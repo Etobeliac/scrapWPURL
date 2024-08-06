@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 from requests.auth import HTTPBasicAuth
+import time
 
 # Fonction pour récupérer les URLs des articles en brouillon avec pagination
 def get_draft_urls(username, password, base_url):
@@ -65,24 +66,41 @@ if st.button("Récupérer les URLs"):
         total_sites = len(base_urls_list)
         progress_bar = st.progress(0)
         progress_text = st.empty()
+        start_time = time.time()
 
         for i, base_url in enumerate(base_urls_list):
             urls = get_draft_urls(username, password, base_url)
             if urls:
                 all_urls.extend(urls)
             progress = (i + 1) / total_sites
+            elapsed_time = time.time() - start_time
+            estimated_total_time = elapsed_time / progress if progress > 0 else elapsed_time
+            estimated_remaining_time = estimated_total_time - elapsed_time
             progress_bar.progress(progress)
-            progress_text.text(f"Progression: {int(progress * 100)}%")
+            progress_text.text(f"Progression: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
 
         if all_urls:
             st.success("URLs des brouillons récupérés avec succès.")
             st.write("URLs des brouillons :")
-            for site_url, draft_url, categories in all_urls:
+
+            # Afficher les premiers résultats
+            initial_results = all_urls[:10]  # Afficher les 10 premiers résultats
+            for site_url, draft_url, categories in initial_results:
                 st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
 
             # Prévisualisation sous forme de tableau
-            df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+            df = pd.DataFrame(initial_results, columns=['URL du site', 'URL du brouillon', 'Thématique'])
             st.write(df)
+
+            # Bouton pour afficher plus de résultats
+            if len(all_urls) > 10:
+                if st.button("Afficher plus"):
+                    for site_url, draft_url, categories in all_urls[10:]:
+                        st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
+
+                    # Prévisualisation sous forme de tableau
+                    df_full = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+                    st.write(df_full)
         else:
             st.info("Aucune URL de brouillon trouvée.")
 
