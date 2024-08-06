@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 from requests.auth import HTTPBasicAuth
+from io import BytesIO
 
 # Fonction pour récupérer les URLs des articles en brouillon
 def get_draft_urls(username, password, base_url):
@@ -55,6 +56,19 @@ if st.button("Récupérer les URLs"):
             # Prévisualisation sous forme de tableau
             df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
             st.write(df)
+
+            # Option de téléchargement
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            output.seek(0)
+
+            st.download_button(
+                label="Télécharger le fichier Excel",
+                data=output,
+                file_name="urls_brouillons.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         else:
             st.info("Aucune URL de brouillon trouvée.")
 
