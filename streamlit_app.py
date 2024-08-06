@@ -77,10 +77,9 @@ if st.button("Récupérer les URLs"):
             estimated_total_time = elapsed_time / progress if progress > 0 else elapsed_time
             estimated_remaining_time = estimated_total_time - elapsed_time
             progress_bar.progress(progress)
-            if progress < 1:
-                progress_text.text(f"Progression: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
-            else:
-                progress_text.text("Récupération terminée.")
+            progress_text.text(f"Progression: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
+
+        progress_text.text("Récupération terminée.")
 
         if all_urls:
             st.success("URLs des brouillons récupérés avec succès.")
