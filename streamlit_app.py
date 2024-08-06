@@ -14,20 +14,7 @@ def get_draft_urls(username, password, base_url):
         total_pages = int(response.headers.get('X-WP-TotalPages', 1))
         urls = []
 
-        # Récupérer les articles de la première page
-        for post in posts:
-            categories = []
-            if 'categories' in post:
-                categories_ids = post['categories']
-                for category_id in categories_ids:
-                    category_response = requests.get(f"{base_url}/wp-json/wp/v2/categories/{category_id}", auth=HTTPBasicAuth(username, password))
-                    if category_response.status_code == 200:
-                        category_name = category_response.json().get('name', '')
-                        categories.append(category_name)
-            urls.append((base_url, post['link'], ', '.join(categories)))
-
-        # Récupérer les articles des pages suivantes
-        for page in range(2, total_pages + 1):
+        for page in range(1, total_pages + 1):
             page_url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100&page={page}"
             page_response = requests.get(page_url, auth=HTTPBasicAuth(username, password))
             if page_response.status_code == 200:
@@ -42,6 +29,9 @@ def get_draft_urls(username, password, base_url):
                                 category_name = category_response.json().get('name', '')
                                 categories.append(category_name)
                     urls.append((base_url, post['link'], ', '.join(categories)))
+            else:
+                st.error(f"Erreur lors de la récupération de la page {page} pour {base_url}.")
+                break
 
         return urls
     else:
@@ -69,44 +59,46 @@ if st.button("Récupérer les URLs"):
         start_time = time.time()
 
         for i, base_url in enumerate(base_urls_list):
+            site_progress = st.empty()
+            site_progress.text(f"Traitement du site : {base_url}")
+            
             urls = get_draft_urls(username, password, base_url)
             if urls:
                 all_urls.extend(urls)
+                site_progress.text(f"Nombre d'URLs trouvées pour {base_url}: {len(urls)}")
+            else:
+                site_progress.text(f"Aucune URL trouvée pour {base_url}")
+            
             progress = (i + 1) / total_sites
             elapsed_time = time.time() - start_time
             estimated_total_time = elapsed_time / progress if progress > 0 else 0
             estimated_remaining_time = max(estimated_total_time - elapsed_time, 0)
+            
             progress_bar.progress(progress)
             progress_text.text(f"Progression: {int(progress * 100)}% - Temps restant estimé: {int(estimated_remaining_time)} secondes")
-            st.experimental_rerun()
+            time.sleep(0.1)  # Petit délai pour permettre à l'interface de se mettre à jour
 
         progress_text.text("Récupération terminée.")
 
         if all_urls:
-            st.success("URLs des brouillons récupérés avec succès.")
-            st.write("URLs des brouillons :")
+            st.success(f"URLs des brouillons récupérés avec succès. Total: {len(all_urls)} URLs.")
+            st.write("Aperçu des URLs des brouillons :")
 
             # Afficher les premiers résultats
-            initial_results = all_urls[:10]  # Afficher les 10 premiers résultats
-            for site_url, draft_url, categories in initial_results:
-                st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
+            df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+            st.write(df.head(10))  # Afficher les 10 premiers résultats
 
-            # Prévisualisation sous forme de tableau
-            df = pd.DataFrame(initial_results, columns=['URL du site', 'URL du brouillon', 'Thématique'])
-            st.write(df)
-
-            # Bouton pour afficher plus de résultats
-            if len(all_urls) > 10:
-                if st.button("Afficher plus"):
-                    for site_url, draft_url, categories in all_urls[10:]:
-                        st.write(f"Site: {site_url}, Brouillon: {draft_url}, Thématique: {categories}")
-
-                    # Prévisualisation sous forme de tableau
-                    df_full = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
-                    st.write(df_full)
+            # Option pour télécharger tous les résultats
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Télécharger tous les résultats (CSV)",
+                data=csv,
+                file_name="urls_brouillons.csv",
+                mime="text/csv",
+            )
         else:
             st.info("Aucune URL de brouillon trouvée.")
 
-# Gestion des erreurs
+# Bouton de réinitialisation
 if st.button("Réinitialiser"):
     st.experimental_rerun()
