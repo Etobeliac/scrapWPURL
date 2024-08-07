@@ -4,22 +4,24 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 import html
 import io
-from bs4 import BeautifulSoup
+import re
 
 def clean_html_content(content):
     # Supprimer toutes les balises HTML
-    soup = BeautifulSoup(content, 'html.parser')
-    text = soup.get_text(separator=' ', strip=True)
+    clean_text = re.sub(r'<[^>]+>', '', content)
     
     # Remplacer les caractères spéciaux par leurs équivalents HTML
-    text = text.replace('é', '&eacute;').replace('è', '&egrave;').replace('ê', '&ecirc;')
-    text = text.replace('à', '&agrave;').replace('â', '&acirc;').replace('ô', '&ocirc;')
-    text = text.replace('ù', '&ugrave;').replace('û', '&ucirc;').replace('ç', '&ccedil;')
-    text = text.replace('É', '&Eacute;').replace('È', '&Egrave;').replace('Ê', '&Ecirc;')
-    text = text.replace('À', '&Agrave;').replace('Â', '&Acirc;').replace('Ô', '&Ocirc;')
-    text = text.replace('Ù', '&Ugrave;').replace('Û', '&Ucirc;').replace('Ç', '&Ccedil;')
+    special_chars = {
+        'é': '&eacute;', 'è': '&egrave;', 'ê': '&ecirc;', 'à': '&agrave;', 
+        'â': '&acirc;', 'ô': '&ocirc;', 'ù': '&ugrave;', 'û': '&ucirc;', 
+        'ç': '&ccedil;', 'É': '&Eacute;', 'È': '&Egrave;', 'Ê': '&Ecirc;', 
+        'À': '&Agrave;', 'Â': '&Acirc;', 'Ô': '&Ocirc;', 'Ù': '&Ugrave;', 
+        'Û': '&Ucirc;', 'Ç': '&Ccedil;'
+    }
+    for char, html_char in special_chars.items():
+        clean_text = clean_text.replace(char, html_char)
     
-    return text
+    return clean_text.strip()
 
 def get_draft_urls_and_content(username, password, base_url):
     url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
