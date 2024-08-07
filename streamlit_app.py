@@ -97,20 +97,19 @@ if st.button("Récupérer les URLs et le Contenu"):
             st.success(f"Articles en brouillon récupérés avec succès. Total: {len(all_data)} articles.")
             
             df = pd.DataFrame(all_data)
-            st.write("Aperçu des données récupérées (sans le contenu complet) :")
-            st.write(df[['URL du site', 'URL du brouillon', 'Thématique']].head(10))
+            st.write("Aperçu des données récupérées (avec un extrait du contenu) :")
+            st.write(df[['URL du site', 'URL du brouillon', 'Thématique', 'Contenu']].head(10).applymap(lambda x: x[:100] if isinstance(x, str) else x))
 
-            # Export en XLSX
-            xlsx_buffer = io.BytesIO()
-            with pd.ExcelWriter(xlsx_buffer, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Articles')
-            xlsx_data = xlsx_buffer.getvalue()
+            # Export en CSV (au lieu de XLSX pour éviter les problèmes de dépendance)
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_data = csv_buffer.getvalue()
             
             st.download_button(
-                label="Télécharger tous les résultats (XLSX)",
-                data=xlsx_data,
-                file_name="articles_brouillons.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                label="Télécharger tous les résultats (CSV)",
+                data=csv_data,
+                file_name="articles_brouillons.csv",
+                mime="text/csv"
             )
         else:
             st.info("Aucun article en brouillon trouvé.")
