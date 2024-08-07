@@ -26,7 +26,8 @@ def get_draft_urls(username, password, base_url):
                             if category_response.status_code == 200:
                                 category_name = category_response.json().get('name', '')
                                 categories.append(category_name)
-                    urls.append((base_url, post['link'], ', '.join(categories)))
+                    content = post.get('content', {}).get('rendered', '')
+                    urls.append((base_url, post['link'], ', '.join(categories), content))
             else:
                 st.error(f"Erreur lors de la récupération de la page {page} pour {base_url}.")
                 break
@@ -53,14 +54,14 @@ if st.button("Récupérer les URLs"):
 
         for base_url in base_urls_list:
             st.write(f"Traitement du site : {base_url}")
-            
+
             urls = get_draft_urls(username, password, base_url)
             if urls:
                 all_urls.extend(urls)
                 st.write(f"Nombre d'URLs trouvées pour {base_url}: {len(urls)}")
             else:
                 st.write(f"Aucune URL trouvée pour {base_url}")
-            
+
             sites_traites += 1
             compteur.text(f"Sites traités : {sites_traites} / {len(base_urls_list)}")
 
@@ -70,7 +71,7 @@ if st.button("Récupérer les URLs"):
             st.success(f"URLs des brouillons récupérés avec succès. Total: {len(all_urls)} URLs.")
             st.write("Aperçu des URLs des brouillons :")
 
-            df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique'])
+            df = pd.DataFrame(all_urls, columns=['URL du site', 'URL du brouillon', 'Thématique', 'Contenu'])
             st.write(df.head(10))
 
             csv = df.to_csv(index=False)
