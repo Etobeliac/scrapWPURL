@@ -7,7 +7,7 @@ import csv
 import random
 import re
 
-# Liste des ancres
+# Liste complète des ancres
 ancres = [
     "En savoir plus", "Cliquez ici pour plus d'informations", "Découvrir davantage",
     "En apprendre davantage", "Visitez notre site", "Découvrez notre site",
