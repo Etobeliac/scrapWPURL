@@ -2,17 +2,8 @@ import streamlit as st
 import requests
 import pandas as pd
 from requests.auth import HTTPBasicAuth
-import html
 import io
-import re
 import csv
-
-def clean_html_content(content):
-    decoded_content = html.unescape(content)
-    clean_text = re.sub(r'<[^>]+>', '', decoded_content)
-    clean_text = re.sub(r'\n', ' ', clean_text)
-    clean_text = re.sub(r'\s+', ' ', clean_text)
-    return clean_text.strip()
 
 def get_draft_urls_and_content(username, password, base_url):
     url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
@@ -45,13 +36,12 @@ def get_draft_urls_and_content(username, password, base_url):
                     categories.append(category_name)
         
         content_html = post.get('content', {}).get('rendered', '')
-        cleaned_content = clean_html_content(content_html)
         
         urls_and_content.append({
             'URL du site': base_url,
             'URL du brouillon': post['link'],
             'Thématique': ', '.join(categories),
-            'Contenu': cleaned_content
+            'Contenu': content_html
         })
 
     return urls_and_content
