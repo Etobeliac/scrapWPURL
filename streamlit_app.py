@@ -8,8 +8,10 @@ import re
 import csv
 
 def clean_html_content(content):
+    # Décode les entités HTML
+    decoded_content = html.unescape(content)
     # Supprimer toutes les balises HTML
-    clean_text = re.sub(r'<[^>]+>', '', content)
+    clean_text = re.sub(r'<[^>]+>', '', decoded_content)
     # Remplacer les sauts de ligne par des espaces
     clean_text = re.sub(r'\n', ' ', clean_text)
     # Supprimer les espaces multiples
@@ -97,12 +99,12 @@ if st.button("Récupérer les URLs et le Contenu"):
 
             # Export en CSV avec un encodage spécifique
             csv_buffer = io.StringIO()
-            df.to_csv(csv_buffer, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8-sig')
+            df.to_csv(csv_buffer, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8-sig', sep=';')
             csv_data = csv_buffer.getvalue()
             
             st.download_button(
                 label="Télécharger tous les résultats (CSV)",
-                data=csv_data,
+                data=csv_data.encode('utf-8-sig'),
                 file_name="articles_brouillons.csv",
                 mime="text/csv"
             )
