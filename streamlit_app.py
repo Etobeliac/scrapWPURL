@@ -75,7 +75,14 @@ ancres = [
     "Cliquez ici pour plus d'informations supplémentaires", "Accédez aux informations supplémentaires ici", "Plus d'informations supplémentaires disponibles ici",
     "En savoir plus sur notre lien", "Découvrez des détails supplémentaires ici", "Cliquez ici pour des informations plus détaillées",
     "Explorez ce lien maintenant", "Plus de détails supplémentaires disponibles ici", "Cliquez ici pour des informations supplémentaires",
-    "En savoir plus sur cette page", "Consultez pour des informations supplémentaires"
+    "En savoir plus sur cette page", "Consultez pour des informations supplémentaires",
+    "Pour plus d'informations, cliquez ici", "Découvrez notre expertise", "En savoir plus sur nos services",
+    "Explorez nos solutions", "Cliquez ici pour plus de détails", "Approfondissez le sujet",
+    "Informations complémentaires disponibles", "Découvrez nos offres", "Pour en apprendre davantage",
+    "Visitez notre page dédiée", "Cliquez pour explorer", "Plus d'informations à votre disposition",
+    "Accédez à notre catalogue complet", "Découvrez nos références", "Pour une analyse approfondie",
+    "Consultez nos ressources", "En savoir plus sur notre approche", "Découvrez nos cas d'études",
+    "Cliquez ici pour une démo", "Explorez nos fonctionnalités", "Pour des informations détaillées"
 ]
 
 def insert_anchor(content):
