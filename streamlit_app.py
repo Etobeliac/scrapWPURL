@@ -6,7 +6,6 @@ import io
 import csv
 import random
 import re
-import json
 
 # Liste complète des ancres
 ancres = [
@@ -76,118 +75,96 @@ ancres = [
     "Cliquez ici pour plus d'informations supplémentaires", "Accédez aux informations supplémentaires ici", "Plus d'informations supplémentaires disponibles ici",
     "En savoir plus sur notre lien", "Découvrez des détails supplémentaires ici", "Cliquez ici pour des informations plus détaillées",
     "Explorez ce lien maintenant", "Plus de détails supplémentaires disponibles ici", "Cliquez ici pour des informations supplémentaires",
-    "En savoir plus sur cette page", "Consultez pour des informations supplémentaires",
-    "Pour plus d'informations, cliquez ici", "Découvrez notre expertise", "En savoir plus sur nos services",
-    "Explorez nos solutions", "Cliquez ici pour plus de détails", "Approfondissez le sujet",
-    "Informations complémentaires disponibles", "Découvrez nos offres", "Pour en apprendre davantage",
-    "Visitez notre page dédiée", "Cliquez pour explorer", "Plus d'informations à votre disposition",
-    "Accédez à notre catalogue complet", "Découvrez nos références", "Pour une analyse approfondie",
-    "Consultez nos ressources", "En savoir plus sur notre approche", "Découvrez nos cas d'études",
-    "Cliquez ici pour une démo", "Explorez nos fonctionnalités", "Pour des informations détaillées"
+    "En savoir plus sur cette page", "Consultez pour des informations supplémentaires"
 ]
 
 def insert_anchor(content):
-    anchor = random.choice(ancres)
-    links = re.findall(r'<a\s+(?:[^>]*?\s+)?href="([^"]*)"', content)
-    for link in links:
-        new_a_tag = f'<a href="{link}">{anchor}</a>'
-        content = content.replace(f'<a href="{link}">', new_a_tag)
-    return content
+    # Diviser le contenu en paragraphes
+    paragraphs = re.split(r'(?<=</p>)\s*(?=<p>)', content)
+    
+    if len(paragraphs) > 1:
+        # Choisir aléatoirement un paragraphe (sauf le dernier)
+        insert_index = random.randint(0, len(paragraphs) - 2)
+        
+        # Choisir une ancre aléatoire
+        anchor = random.choice(ancres)
+        
+        # Insérer l'ancre à la fin du paragraphe choisi
+        paragraphs[insert_index] = paragraphs[insert_index][:-4] + f' <a href="#">{anchor}</a></p>'
+        
+        # Rejoindre les paragraphes
+        return ''.join(paragraphs)
+    else:
+        # Si un seul paragraphe, ajouter l'ancre à la fin
+        anchor = random.choice(ancres)
+        return content[:-4] + f' <a href="#">{anchor}</a></p>'
 
 def get_draft_urls_and_content(username, password, base_url):
-    api_url = f"{base_url}/wp-json/wp/v2/posts"
-    params = {
-        "status": "draft",
-        "per_page": 100,  # WordPress limite à 100 par page, nous allons paginer
-        "page": 1
-    }
-    auth = HTTPBasicAuth(username, password)
-    
+    url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
     all_posts = []
+    page = 1
     
     while True:
-        try:
-            response = requests.get(api_url, params=params, auth=auth)
-            
-            # Si nous obtenons une erreur 400, cela signifie probablement qu'il n'y a plus de pages
-            if response.status_code == 400:
-                break
-            
-            response.raise_for_status()
-            posts = response.json()
-            
-            if not posts:  # Si la page est vide, on a récupéré tous les articles
-                break
-            
-            all_posts.extend(posts)
-            
-            # Passage à la page suivante
-            params['page'] += 1
-            
-        except requests.RequestException as e:
-            st.warning(f"Avertissement lors de la récupération des données pour la page {params['page']}: {str(e)}")
+        page_url = f"{url}&page={page}"
+        response = requests.get(page_url, auth=HTTPBasicAuth(username, password))
+        
+        if response.status_code != 200:
             break
-    
-    data = []
+        
+        posts = response.json()
+        if not posts:
+            break
+        
+        all_posts.extend(posts)
+        page += 1
+
+    urls_and_content = []
     for post in all_posts:
-        content = post['content']['rendered']
-        modified_content = insert_anchor(content)
-        data.append({
+        categories = []
+        if 'categories' in post:
+            categories_ids = post['categories']
+            for category_id in categories_ids:
+                category_response = requests.get(f"{base_url}/wp-json/wp/v2/categories/{category_id}", auth=HTTPBasicAuth(username, password))
+                if category_response.status_code == 200:
+                    category_name = category_response.json().get('name', '')
+                    categories.append(category_name)
+        
+        content_html = post.get('content', {}).get('rendered', '')
+        modified_content = insert_anchor(content_html)
+        
+        urls_and_content.append({
             'URL du site': base_url,
             'URL du brouillon': post['link'],
-            'Thématique': ', '.join([tag['name'] for tag in post['tags']]) if post['tags'] else 'Non spécifié',
-            'Contenu': content,
+            'Thématique': ', '.join(categories),
+            'Contenu': content_html,
             'Contenu modifié': modified_content
         })
-    
-    return data
 
-def save_progress(data):
-    st.session_state.progress_data = data
-
-def load_progress():
-    return st.session_state.get('progress_data', None)
+    return urls_and_content
 
 st.title("Récupérateur d'URLs et Contenu des Articles en Brouillon WordPress")
 
-if 'wordpress_username' not in st.session_state:
-    st.session_state.wordpress_username = ''
-if 'base_urls' not in st.session_state:
-    st.session_state.base_urls = ''
-if 'progress_data' not in st.session_state:
-    st.session_state.progress_data = None
-
-username = st.text_input("Nom d'utilisateur WordPress", value=st.session_state.wordpress_username)
+username = st.text_input("Nom d'utilisateur WordPress")
 password = st.text_input("Mot de passe WordPress", type="password")
-base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)", value=st.session_state.base_urls)
-
-if st.button("Sauvegarder les paramètres"):
-    st.session_state.wordpress_username = username
-    st.session_state.base_urls = base_urls
-    st.success("Paramètres sauvegardés!")
+base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)")
 
 if st.button("Récupérer les URLs et le Contenu"):
     if not username or not password or not base_urls:
         st.error("Veuillez remplir tous les champs.")
     else:
         base_urls_list = [url.strip() for url in base_urls.split("\n") if url.strip()]
-        all_data = load_progress() or []
+        all_data = []
         progress_bar = st.progress(0)
 
         for i, base_url in enumerate(base_urls_list):
             st.write(f"Traitement du site : {base_url}")
             
-            try:
-                data = get_draft_urls_and_content(username, password, base_url)
-                if data:
-                    all_data.extend(data)
-                    st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
-                else:
-                    st.write(f"Aucun article trouvé pour {base_url}")
-                
-                save_progress(all_data)
-            except Exception as e:
-                st.error(f"Erreur lors de la récupération des données pour {base_url}: {str(e)}")
+            data = get_draft_urls_and_content(username, password, base_url)
+            if data:
+                all_data.extend(data)
+                st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
+            else:
+                st.write(f"Aucun article trouvé pour {base_url}")
             
             progress_bar.progress((i + 1) / len(base_urls_list))
 
@@ -203,10 +180,6 @@ if st.button("Récupérer les URLs et le Contenu"):
             preview_df['Contenu modifié'] = preview_df['Contenu modifié'].str[:100] + '...'
             st.write(preview_df)
 
-            if st.button("Prévisualiser le contenu modifié"):
-                article_index = st.selectbox("Choisir un article à prévisualiser", range(len(df)))
-                st.write(df.iloc[article_index]['Contenu modifié'])
-
             csv_buffer = io.StringIO()
             df.to_csv(csv_buffer, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8-sig', sep=';')
             csv_data = csv_buffer.getvalue()
@@ -221,5 +194,4 @@ if st.button("Récupérer les URLs et le Contenu"):
             st.info("Aucun article en brouillon trouvé.")
 
 if st.button("Réinitialiser"):
-    st.session_state.progress_data = None
     st.experimental_rerun()
