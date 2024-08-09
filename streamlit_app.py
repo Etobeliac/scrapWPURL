@@ -79,32 +79,23 @@ ancres = [
 ]
 
 def insert_anchor(content):
-    # Diviser le contenu en paragraphes
     paragraphs = re.split(r'(?<=</p>)\s*(?=<p>)', content)
     
     if len(paragraphs) > 1:
-        # Choisir aléatoirement un paragraphe (sauf le dernier)
         insert_index = random.randint(0, len(paragraphs) - 2)
-        
-        # Choisir une ancre aléatoire
         anchor = random.choice(ancres)
-        
-        # Insérer l'ancre à la fin du paragraphe choisi
         paragraphs[insert_index] = paragraphs[insert_index][:-4] + f' <a href="#">{anchor}</a></p>'
-        
-        # Rejoindre les paragraphes
         return ''.join(paragraphs)
     else:
-        # Si un seul paragraphe, ajouter l'ancre à la fin
         anchor = random.choice(ancres)
         return content[:-4] + f' <a href="#">{anchor}</a></p>'
 
-def get_draft_urls_and_content(username, password, base_url):
+def get_draft_urls_and_content(username, password, base_url, max_articles):
     url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
     all_posts = []
     page = 1
     
-    while True:
+    while len(all_posts) < max_articles:
         page_url = f"{url}&page={page}"
         response = requests.get(page_url, auth=HTTPBasicAuth(username, password))
         
@@ -119,7 +110,7 @@ def get_draft_urls_and_content(username, password, base_url):
         page += 1
 
     urls_and_content = []
-    for post in all_posts:
+    for post in all_posts[:max_articles]:
         categories = []
         if 'categories' in post:
             categories_ids = post['categories']
@@ -144,9 +135,20 @@ def get_draft_urls_and_content(username, password, base_url):
 
 st.title("Récupérateur d'URLs et Contenu des Articles en Brouillon WordPress")
 
-username = st.text_input("Nom d'utilisateur WordPress")
+if 'wordpress_username' not in st.session_state:
+    st.session_state.wordpress_username = ''
+if 'base_urls' not in st.session_state:
+    st.session_state.base_urls = ''
+
+username = st.text_input("Nom d'utilisateur WordPress", value=st.session_state.wordpress_username)
 password = st.text_input("Mot de passe WordPress", type="password")
-base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)")
+base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)", value=st.session_state.base_urls)
+max_articles = st.number_input("Nombre maximum d'articles à récupérer par site", min_value=1, value=100)
+
+if st.button("Sauvegarder les paramètres"):
+    st.session_state.wordpress_username = username
+    st.session_state.base_urls = base_urls
+    st.success("Paramètres sauvegardés!")
 
 if st.button("Récupérer les URLs et le Contenu"):
     if not username or not password or not base_urls:
@@ -159,12 +161,15 @@ if st.button("Récupérer les URLs et le Contenu"):
         for i, base_url in enumerate(base_urls_list):
             st.write(f"Traitement du site : {base_url}")
             
-            data = get_draft_urls_and_content(username, password, base_url)
-            if data:
-                all_data.extend(data)
-                st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
-            else:
-                st.write(f"Aucun article trouvé pour {base_url}")
+            try:
+                data = get_draft_urls_and_content(username, password, base_url, max_articles)
+                if data:
+                    all_data.extend(data)
+                    st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
+                else:
+                    st.write(f"Aucun article trouvé pour {base_url}")
+            except requests.RequestException as e:
+                st.error(f"Erreur lors de la récupération des données pour {base_url}: {str(e)}")
             
             progress_bar.progress((i + 1) / len(base_urls_list))
 
@@ -179,6 +184,10 @@ if st.button("Récupérer les URLs et le Contenu"):
             preview_df['Contenu'] = preview_df['Contenu'].str[:100] + '...'
             preview_df['Contenu modifié'] = preview_df['Contenu modifié'].str[:100] + '...'
             st.write(preview_df)
+
+            if st.button("Prévisualiser le contenu modifié"):
+                article_index = st.selectbox("Choisir un article à prévisualiser", range(len(df)))
+                st.write(df.iloc[article_index]['Contenu modifié'])
 
             csv_buffer = io.StringIO()
             df.to_csv(csv_buffer, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8-sig', sep=';')
