@@ -108,6 +108,11 @@ def get_draft_urls_and_content(username, password, base_url):
     while True:
         try:
             response = requests.get(api_url, params=params, auth=auth)
+            
+            # Si nous obtenons une erreur 400, cela signifie probablement qu'il n'y a plus de pages
+            if response.status_code == 400:
+                break
+            
             response.raise_for_status()
             posts = response.json()
             
@@ -120,7 +125,7 @@ def get_draft_urls_and_content(username, password, base_url):
             params['page'] += 1
             
         except requests.RequestException as e:
-            st.error(f"Erreur lors de la récupération des données: {str(e)}")
+            st.warning(f"Avertissement lors de la récupération des données pour la page {params['page']}: {str(e)}")
             break
     
     data = []
