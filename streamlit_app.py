@@ -6,7 +6,6 @@ import io
 import csv
 import random
 import re
-import html
 
 # Liste complète des ancres
 ancres = [
@@ -79,19 +78,10 @@ ancres = [
     "En savoir plus sur cette page", "Consultez pour des informations supplémentaires"
 ]
 
-def clean_html_content(content):
-    # Supprime les balises HTML
-    clean_content = re.sub('<[^<]+?>', '', content)
-    # Décode les entités HTML
-    clean_content = html.unescape(clean_content)
-    # Remplace les sauts de ligne par des espaces
-    clean_content = clean_content.replace('\n', ' ').replace('\r', '')
-    return clean_content
-
 def insert_anchor(content):
     # Diviser le contenu en paragraphes
     paragraphs = re.split(r'(?<=</p>)\s*(?=<p>)', content)
-
+    
     if len(paragraphs) > 1:
         # Choisir aléatoirement un paragraphe (sauf le dernier)
         insert_index = random.randint(0, len(paragraphs) - 2)
@@ -113,7 +103,7 @@ def get_draft_urls_and_content(username, password, base_url):
     url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
     all_posts = []
     page = 1
-
+    
     while True:
         page_url = f"{url}&page={page}"
         response = requests.get(page_url, auth=HTTPBasicAuth(username, password))
@@ -141,15 +131,13 @@ def get_draft_urls_and_content(username, password, base_url):
         
         content_html = post.get('content', {}).get('rendered', '')
         modified_content = insert_anchor(content_html)
-        clean_content = clean_html_content(content_html)
-        clean_modified_content = clean_html_content(modified_content)
         
         urls_and_content.append({
             'URL du site': base_url,
             'URL du brouillon': post['link'],
             'Thématique': ', '.join(categories),
-            'Contenu': clean_content,
-            'Contenu modifié': clean_modified_content
+            'Contenu': content_html,
+            'Contenu modifié': modified_content
         })
 
     return urls_and_content
@@ -193,7 +181,7 @@ if st.button("Récupérer les URLs et le Contenu"):
             st.write(preview_df)
 
             csv_buffer = io.StringIO()
-            df.to_csv(csv_buffer, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8-sig', sep='\t')
+            df.to_csv(csv_buffer, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8-sig', sep=';')
             csv_data = csv_buffer.getvalue()
             
             st.download_button(
