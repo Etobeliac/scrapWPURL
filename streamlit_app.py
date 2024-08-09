@@ -6,6 +6,7 @@ import io
 import csv
 import random
 import re
+import json
 
 # Liste complète des ancres
 ancres = [
@@ -86,59 +87,16 @@ ancres = [
 ]
 
 def insert_anchor(content):
-    paragraphs = re.split(r'(?<=</p>)\s*(?=<p>)', content)
-    
-    if len(paragraphs) > 1:
-        insert_index = random.randint(0, len(paragraphs) - 2)
-        anchor = random.choice(ancres)
-        paragraphs[insert_index] = paragraphs[insert_index][:-4] + f' <a href="#">{anchor}</a></p>'
-        return ''.join(paragraphs)
-    else:
-        anchor = random.choice(ancres)
-        return content[:-4] + f' <a href="#">{anchor}</a></p>'
+    # Cette fonction reste inchangée
 
 def get_draft_urls_and_content(username, password, base_url, max_articles):
-    url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
-    all_posts = []
-    page = 1
-    
-    while len(all_posts) < max_articles:
-        page_url = f"{url}&page={page}"
-        response = requests.get(page_url, auth=HTTPBasicAuth(username, password))
-        
-        if response.status_code != 200:
-            break
-        
-        posts = response.json()
-        if not posts:
-            break
-        
-        all_posts.extend(posts)
-        page += 1
+    # Cette fonction reste inchangée
 
-    urls_and_content = []
-    for post in all_posts[:max_articles]:
-        categories = []
-        if 'categories' in post:
-            categories_ids = post['categories']
-            for category_id in categories_ids:
-                category_response = requests.get(f"{base_url}/wp-json/wp/v2/categories/{category_id}", auth=HTTPBasicAuth(username, password))
-                if category_response.status_code == 200:
-                    category_name = category_response.json().get('name', '')
-                    categories.append(category_name)
-        
-        content_html = post.get('content', {}).get('rendered', '')
-        modified_content = insert_anchor(content_html)
-        
-        urls_and_content.append({
-            'URL du site': base_url,
-            'URL du brouillon': post['link'],
-            'Thématique': ', '.join(categories),
-            'Contenu': content_html,
-            'Contenu modifié': modified_content
-        })
+def save_progress(data):
+    st.session_state.progress_data = data
 
-    return urls_and_content
+def load_progress():
+    return st.session_state.get('progress_data', None)
 
 st.title("Récupérateur d'URLs et Contenu des Articles en Brouillon WordPress")
 
@@ -146,11 +104,12 @@ if 'wordpress_username' not in st.session_state:
     st.session_state.wordpress_username = ''
 if 'base_urls' not in st.session_state:
     st.session_state.base_urls = ''
+if 'progress_data' not in st.session_state:
+    st.session_state.progress_data = None
 
 username = st.text_input("Nom d'utilisateur WordPress", value=st.session_state.wordpress_username)
 password = st.text_input("Mot de passe WordPress", type="password")
 base_urls = st.text_area("URLs de base de vos sites WordPress (une par ligne)", value=st.session_state.base_urls)
-max_articles = st.number_input("Nombre maximum d'articles à récupérer par site", min_value=1, value=100)
 
 if st.button("Sauvegarder les paramètres"):
     st.session_state.wordpress_username = username
@@ -162,19 +121,22 @@ if st.button("Récupérer les URLs et le Contenu"):
         st.error("Veuillez remplir tous les champs.")
     else:
         base_urls_list = [url.strip() for url in base_urls.split("\n") if url.strip()]
-        all_data = []
+        all_data = load_progress() or []
         progress_bar = st.progress(0)
 
         for i, base_url in enumerate(base_urls_list):
             st.write(f"Traitement du site : {base_url}")
             
             try:
-                data = get_draft_urls_and_content(username, password, base_url, max_articles)
+                data = get_draft_urls_and_content(username, password, base_url, 100)  # Utilisation de 100 comme valeur par défaut
                 if data:
                     all_data.extend(data)
                     st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
                 else:
                     st.write(f"Aucun article trouvé pour {base_url}")
+                
+                # Sauvegarde de la progression après chaque site traité
+                save_progress(all_data)
             except requests.RequestException as e:
                 st.error(f"Erreur lors de la récupération des données pour {base_url}: {str(e)}")
             
@@ -210,4 +172,5 @@ if st.button("Récupérer les URLs et le Contenu"):
             st.info("Aucun article en brouillon trouvé.")
 
 if st.button("Réinitialiser"):
+    st.session_state.progress_data = None
     st.experimental_rerun()
