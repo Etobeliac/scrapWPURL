@@ -87,10 +87,42 @@ ancres = [
 ]
 
 def insert_anchor(content):
-    # Cette fonction reste inchangée
+    anchor = random.choice(ancres)
+    links = re.findall(r'<a\s+(?:[^>]*?\s+)?href="([^"]*)"', content)
+    for link in links:
+        new_a_tag = f'<a href="{link}">{anchor}</a>'
+        content = content.replace(f'<a href="{link}">', new_a_tag)
+    return content
 
 def get_draft_urls_and_content(username, password, base_url, max_articles):
-    # Cette fonction reste inchangée
+    api_url = f"{base_url}/wp-json/wp/v2/posts"
+    params = {
+        "status": "draft",
+        "per_page": max_articles
+    }
+    auth = HTTPBasicAuth(username, password)
+    
+    try:
+        response = requests.get(api_url, params=params, auth=auth)
+        response.raise_for_status()
+        posts = response.json()
+        
+        data = []
+        for post in posts:
+            content = post['content']['rendered']
+            modified_content = insert_anchor(content)
+            data.append({
+                'URL du site': base_url,
+                'URL du brouillon': post['link'],
+                'Thématique': ', '.join([tag['name'] for tag in post['tags']]) if post['tags'] else 'Non spécifié',
+                'Contenu': content,
+                'Contenu modifié': modified_content
+            })
+        
+        return data
+    except requests.RequestException as e:
+        st.error(f"Erreur lors de la récupération des données: {str(e)}")
+        return None
 
 def save_progress(data):
     st.session_state.progress_data = data
@@ -128,14 +160,13 @@ if st.button("Récupérer les URLs et le Contenu"):
             st.write(f"Traitement du site : {base_url}")
             
             try:
-                data = get_draft_urls_and_content(username, password, base_url, 100)  # Utilisation de 100 comme valeur par défaut
+                data = get_draft_urls_and_content(username, password, base_url, 100)
                 if data:
                     all_data.extend(data)
                     st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
                 else:
                     st.write(f"Aucun article trouvé pour {base_url}")
                 
-                # Sauvegarde de la progression après chaque site traité
                 save_progress(all_data)
             except requests.RequestException as e:
                 st.error(f"Erreur lors de la récupération des données pour {base_url}: {str(e)}")
