@@ -94,35 +94,48 @@ def insert_anchor(content):
         content = content.replace(f'<a href="{link}">', new_a_tag)
     return content
 
-def get_draft_urls_and_content(username, password, base_url, max_articles):
+def get_draft_urls_and_content(username, password, base_url):
     api_url = f"{base_url}/wp-json/wp/v2/posts"
     params = {
         "status": "draft",
-        "per_page": max_articles
+        "per_page": 100,  # WordPress limite à 100 par page, nous allons paginer
+        "page": 1
     }
     auth = HTTPBasicAuth(username, password)
     
-    try:
-        response = requests.get(api_url, params=params, auth=auth)
-        response.raise_for_status()
-        posts = response.json()
-        
-        data = []
-        for post in posts:
-            content = post['content']['rendered']
-            modified_content = insert_anchor(content)
-            data.append({
-                'URL du site': base_url,
-                'URL du brouillon': post['link'],
-                'Thématique': ', '.join([tag['name'] for tag in post['tags']]) if post['tags'] else 'Non spécifié',
-                'Contenu': content,
-                'Contenu modifié': modified_content
-            })
-        
-        return data
-    except requests.RequestException as e:
-        st.error(f"Erreur lors de la récupération des données: {str(e)}")
-        return None
+    all_posts = []
+    
+    while True:
+        try:
+            response = requests.get(api_url, params=params, auth=auth)
+            response.raise_for_status()
+            posts = response.json()
+            
+            if not posts:  # Si la page est vide, on a récupéré tous les articles
+                break
+            
+            all_posts.extend(posts)
+            
+            # Passage à la page suivante
+            params['page'] += 1
+            
+        except requests.RequestException as e:
+            st.error(f"Erreur lors de la récupération des données: {str(e)}")
+            break
+    
+    data = []
+    for post in all_posts:
+        content = post['content']['rendered']
+        modified_content = insert_anchor(content)
+        data.append({
+            'URL du site': base_url,
+            'URL du brouillon': post['link'],
+            'Thématique': ', '.join([tag['name'] for tag in post['tags']]) if post['tags'] else 'Non spécifié',
+            'Contenu': content,
+            'Contenu modifié': modified_content
+        })
+    
+    return data
 
 def save_progress(data):
     st.session_state.progress_data = data
@@ -160,7 +173,7 @@ if st.button("Récupérer les URLs et le Contenu"):
             st.write(f"Traitement du site : {base_url}")
             
             try:
-                data = get_draft_urls_and_content(username, password, base_url, 100)
+                data = get_draft_urls_and_content(username, password, base_url)
                 if data:
                     all_data.extend(data)
                     st.write(f"Nombre d'articles trouvés pour {base_url}: {len(data)}")
@@ -168,7 +181,7 @@ if st.button("Récupérer les URLs et le Contenu"):
                     st.write(f"Aucun article trouvé pour {base_url}")
                 
                 save_progress(all_data)
-            except requests.RequestException as e:
+            except Exception as e:
                 st.error(f"Erreur lors de la récupération des données pour {base_url}: {str(e)}")
             
             progress_bar.progress((i + 1) / len(base_urls_list))
