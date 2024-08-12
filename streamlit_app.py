@@ -7,6 +7,7 @@ import csv
 import random
 import re
 import html
+from functools import lru_cache
 
 # Liste complète des ancres
 ancres = [
@@ -100,6 +101,7 @@ def insert_anchor(content):
         anchor = random.choice(ancres)
         return content[:-4] + f' <a href="#">{anchor}</a></p>'
 
+@st.cache_data(ttl=3600)  # Cache les résultats pendant 1 heure
 def get_draft_urls_and_content(username, password, base_url):
     url = f"{base_url}/wp-json/wp/v2/posts?status=draft&per_page=100"
     all_posts = []
