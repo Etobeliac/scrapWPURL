@@ -6,6 +6,7 @@ import io
 import csv
 import random
 import re
+import html
 
 # Liste complète des ancres
 ancres = [
@@ -130,6 +131,7 @@ def get_draft_urls_and_content(username, password, base_url):
                     categories.append(category_name)
         
         content_html = post.get('content', {}).get('rendered', '')
+        content_html = html.unescape(content_html)  # Décodage des entités HTML
         modified_content = insert_anchor(content_html)
         
         urls_and_content.append({
